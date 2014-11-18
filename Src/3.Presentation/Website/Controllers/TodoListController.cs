@@ -1,4 +1,5 @@
-﻿using System;
+﻿using ServiceStack;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Entity.Infrastructure;
@@ -11,20 +12,58 @@ using Website.Models;
 
 namespace Website.Controllers
 {
+    //REST Resource DTO
+    [Route("/todos")]
+    [Route("/todos/{Ids}")]
+    public class Todos : IReturn<List<Todo>>
+    {
+        public long[] Ids { get; set; }
+        public Todos(params long[] ids)
+        {
+            this.Ids = ids;
+        }
+    }
+
+    [Route("/todos", "POST")]
+    [Route("/todos/{Id}", "PUT")]
+    public class Todo : IReturn<Todo>
+    {
+        public long Id { get; set; }
+        public string Content { get; set; }
+        public int Order { get; set; }
+        public bool Done { get; set; }
+    }
+
     [Authorize]
     public class TodoListController : ApiController
     {
         private TodoItemContext db = new TodoItemContext();
 
         // GET api/TodoList
-        public IEnumerable<TodoListDto> GetTodoLists()
+        public List<Todo> GetTodoLists()
         {
-            return db.TodoLists.Include("Todos")
-                .Where(u => u.UserId == User.Identity.Name)
-                .OrderByDescending(u => u.TodoListId)
-                .AsEnumerable()
-                .Select(todoList => new TodoListDto(todoList));
+            var client = new JsonServiceClient("http://localhost:50899/api/todos?format=json");
+            List<Todo> all = client.Get(new Todos());
+
+            return all;
+
+            //return db.TodoLists.Include("Todos")
+            //    .Where(u => u.UserId == User.Identity.Name)
+            //    .OrderByDescending(u => u.TodoListId)
+            //    .AsEnumerable()
+            //    .Select(todoList => new TodoListDto(todoList));
         }
+
+
+        //// GET api/TodoList
+        //public IEnumerable<TodoListDto> GetTodoLists()
+        //{
+        //    return db.TodoLists.Include("Todos")
+        //        .Where(u => u.UserId == User.Identity.Name)
+        //        .OrderByDescending(u => u.TodoListId)
+        //        .AsEnumerable()
+        //        .Select(todoList => new TodoListDto(todoList));
+        //}
 
         // GET api/TodoList/5
         public TodoListDto GetTodoList(int id)
